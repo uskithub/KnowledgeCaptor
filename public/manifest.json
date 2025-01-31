@@ -1,0 +1,13 @@
+{
+    "manifest_version": 3,
+    "name": "knowledgeCaptor",
+    "version": "1.0",
+    "description": "Web閲覧時の情報収集",
+    "permissions": [],
+    "content_scripts": [
+      {
+        "matches": ["<all_urls>"],
+        "js": ["content.js"]
+      }
+    ]
+  }

@@ -1,0 +1,18 @@
+{
+  "name": "knowledge-captor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build --config=vite.config.build.ts",
+    "format": "prettier --write \"src/**/*.(ts|vue)\"",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.300",
+    "prettier": "^3.4.2",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.5"
+  }
+}
