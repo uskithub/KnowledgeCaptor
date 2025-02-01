@@ -1,59 +1,63 @@
-import { Empty, SwiftEnum, SwiftEnumCases } from "./enum";
+import { Empty, SwiftEnum, SwiftEnumCases } from "./enum"
 
-type Observer<T> = (data: T) => void;
+type Observer<T> = (data: T) => void
 
 type KeyEventContext = {
-  keyDown: { key: string };
-  keyUp: { key: string };
-  blur: Empty;
-};
+  keyDown: { key: string }
+  keyUp: { key: string }
+  blur: Empty
+  arrowUp: Empty
+  arrowDown: Empty
+}
 
-export const KeyEvent = new SwiftEnum<KeyEventContext>();
-export type KeyEvent = SwiftEnumCases<KeyEventContext>;
+export const KeyEvent = new SwiftEnum<KeyEventContext>()
+export type KeyEvent = SwiftEnumCases<KeyEventContext>
 
 export class KeyObserver {
-  private observers: Observer<KeyEvent>[] = [];
+  private isKeyPressing = false
+  private observers: Observer<KeyEvent>[] = []
   constructor(private keyCode: string = "MetaLeft") {}
 
   start() {
-    document.addEventListener("keydown", this.keydownHandler.bind(this));
+    document.addEventListener("keydown", this.keydownHandler.bind(this))
   }
 
   subscribe(observer: Observer<KeyEvent>): void {
-    this.observers.push(observer);
+    this.observers.push(observer)
   }
 
   private keydownHandler(e: KeyboardEvent): void {
-    console.log("keydown:", e.code);
+    // console.log("keydown:", e.code);
 
-    if (e.code !== this.keyCode) {
-      return;
-    }
-
-    const keyupHandler = ((keyCode: string) => {
-      return (e2: KeyboardEvent) => {
-        console.log(`waiting for keyup of ${keyCode}:`, e2.code);
-        if (e2.code === keyCode) {
-          this.observers.forEach((observer) =>
-            observer(KeyEvent.keyUp({ key: keyCode })),
-          );
-          document.removeEventListener("keyup", keyupHandler);
-          window.removeEventListener("blur", blurHandler);
+    if (e.code === this.keyCode) {
+      const keyupHandler = ((keyCode: string) => {
+        return (e2: KeyboardEvent) => {
+          console.log(`waiting for keyup of ${keyCode}:`, e2.code)
+          if (e2.code === keyCode) {
+            this.observers.forEach((observer) => observer(KeyEvent.keyUp({ key: keyCode })))
+            this.isKeyPressing = false
+            document.removeEventListener("keyup", keyupHandler)
+            window.removeEventListener("blur", blurHandler)
+          }
         }
-      };
-    })(e.code);
+      })(e.code)
 
-    const blurHandler = (_e: FocusEvent) => {
-      console.log("blur");
-      this.observers.forEach((observer) => observer(KeyEvent.blur()));
-      document.removeEventListener("keyup", keyupHandler);
-      window.removeEventListener("blur", blurHandler);
-    };
+      const blurHandler = (_e: FocusEvent) => {
+        console.log("blur")
+        this.observers.forEach((observer) => observer(KeyEvent.blur()))
+        this.isKeyPressing = false
+        document.removeEventListener("keyup", keyupHandler)
+        window.removeEventListener("blur", blurHandler)
+      }
 
-    this.observers.forEach((observer) =>
-      observer(KeyEvent.keyDown({ key: e.code })),
-    );
-    document.addEventListener("keyup", keyupHandler);
-    window.addEventListener("blur", blurHandler);
+      this.isKeyPressing = true
+      this.observers.forEach((observer) => observer(KeyEvent.keyDown({ key: e.code })))
+      document.addEventListener("keyup", keyupHandler)
+      window.addEventListener("blur", blurHandler)
+    } else if (e.code === "ArrowUp" && this.isKeyPressing) {
+      this.observers.forEach((observer) => observer(KeyEvent.arrowUp()))
+    } else if (e.code === "ArrowDown" && this.isKeyPressing) {
+      this.observers.forEach((observer) => observer(KeyEvent.arrowDown()))
+    }
   }
 }

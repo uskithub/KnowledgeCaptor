@@ -1,9 +1,9 @@
-export type Empty = Record<string, never>;
-type CaseWithAssociatedValues = Record<string, object>;
+export type Empty = Record<string, never>
+type CaseWithAssociatedValues = Record<string, object>
 
 type KeyFactory<T extends CaseWithAssociatedValues> = {
-  [K in keyof T]: K;
-};
+  [K in keyof T]: K
+}
 
 const KeyFactory = class KeyFactory {
   constructor() {
@@ -12,36 +12,29 @@ const KeyFactory = class KeyFactory {
         // prop = scene
         return typeof prop === "string" && !(prop in target)
           ? prop
-          : Reflect.get(target, prop, receiver);
-      },
-    });
+          : Reflect.get(target, prop, receiver)
+      }
+    })
   }
-} as new <T extends CaseWithAssociatedValues>() => KeyFactory<T>;
+} as new <T extends CaseWithAssociatedValues>() => KeyFactory<T>
 
-type SwiftEnumCase<
-  T extends CaseWithAssociatedValues,
-  K extends keyof T,
-  U,
-> = U &
-  (T[K] extends Empty ? { readonly case: K } : { readonly case: K } & T[K]);
+type SwiftEnumCase<T extends CaseWithAssociatedValues, K extends keyof T, U> = U &
+  (T[K] extends Empty ? { readonly case: K } : { readonly case: K } & T[K])
 
 export type SwiftEnumCases<T extends CaseWithAssociatedValues, U = Empty> = {
-  readonly [K in keyof T]: SwiftEnumCase<T, K, U>;
-}[keyof T];
+  readonly [K in keyof T]: SwiftEnumCase<T, K, U>
+}[keyof T]
 
 export type SwiftEnum<T extends CaseWithAssociatedValues, U> = {
   [K in keyof T]: T[K] extends Empty
     ? () => SwiftEnumCase<T, K, U>
-    : (associatedValues: T[K]) => SwiftEnumCase<T, K, U>;
-} & { keys: KeyFactory<T> };
+    : (associatedValues: T[K]) => SwiftEnumCase<T, K, U>
+} & { keys: KeyFactory<T> }
 
-export const SwiftEnum = class SwiftEnum<
-  T extends CaseWithAssociatedValues,
-  U extends Object,
-> {
-  keys: KeyFactory<T>;
+export const SwiftEnum = class SwiftEnum<T extends CaseWithAssociatedValues, U extends Object> {
+  keys: KeyFactory<T>
   constructor(f?: new () => U) {
-    this.keys = new KeyFactory<T>();
+    this.keys = new KeyFactory<T>()
     return new Proxy(this, {
       get(target, prop, receiver) {
         return typeof prop === "string" && !(prop in target)
@@ -49,18 +42,11 @@ export const SwiftEnum = class SwiftEnum<
             (associatedValues?: any) =>
               f !== undefined
                 ? Object.freeze(
-                    Object.assign(
-                      new f(),
-                      Object.assign(associatedValues || {}, { case: prop }),
-                    ),
+                    Object.assign(new f(), Object.assign(associatedValues || {}, { case: prop }))
                   )
-                : Object.freeze(
-                    Object.assign(associatedValues || {}, { case: prop }),
-                  )
-          : Reflect.get(target, prop, receiver);
-      },
-    });
+                : Object.freeze(Object.assign(associatedValues || {}, { case: prop }))
+          : Reflect.get(target, prop, receiver)
+      }
+    })
   }
-} as new <T extends CaseWithAssociatedValues, U = Empty>(
-  f?: new () => U,
-) => SwiftEnum<T, U>;
+} as new <T extends CaseWithAssociatedValues, U = Empty>(f?: new () => U) => SwiftEnum<T, U>

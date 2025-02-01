@@ -1,7 +1,4 @@
-import { KeyObserver } from "./keyObserver";
+import { Behavior } from "./behavior"
 
-const keyObserver = new KeyObserver();
-keyObserver.subscribe((context) => {
-  console.log("observer:", context);
-});
-keyObserver.start();
+const behavior = new Behavior()
+behavior.setup()

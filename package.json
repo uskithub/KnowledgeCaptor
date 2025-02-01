@@ -5,14 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build --config=vite.config.build.ts",
+    "build": "vue-tsc -b && vite build --config=vite.config.build.ts",
     "format": "prettier --write \"src/**/*.(ts|vue)\"",
     "preview": "vite preview"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.300",
+    "@vitejs/plugin-vue": "^5.2.1",
     "prettier": "^3.4.2",
     "typescript": "~5.6.2",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "vue-tsc": "^2.2.0"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
   }
 }
