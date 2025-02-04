@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, Reactive, toRaw, watch } from "vue"
+import { inject, ref, watch } from "vue"
 import { Constants } from "./constants"
 import { PanelState, Usecases } from "./behavior"
 
@@ -9,17 +9,34 @@ const actions = inject<{
   dispatch: (usecase: Usecases) => Promise<any>
 }>(Constants.ACTIONS)!
 
+const elemRef = ref<HTMLDivElement | null>(null)
+
+watch(
+  () => panelState.elem,
+  (newValue) => {
+    if (newValue && elemRef.value) {
+      console.log("canvas", newValue)
+      elemRef.value.innerHTML = ""
+      elemRef.value.appendChild(newValue)
+    }
+  }
+)
+
 const onClickClose = () => {
   actions.dispatch(Usecases.closePanel())
 }
 </script>
 <template>
   <div
-    v-if="panelState.visible"
+    v-show="panelState.visible"
     class="vue-panel"
     :style="{ left: panelState.x + 'px', top: panelState.y + 'px' }"
   >
-    {{ panelState.elem.outerHTML }}
+    <div
+      ref="elemRef"
+      :style="{ backgroundColor: panelState.backgroundColor ?? 'transparent' }"
+    ></div>
+    <!-- {{ panelState.elem?.outerHTML }} -->
     <button @click="onClickClose" style="margin-left: 10px">閉じる</button>
   </div>
 </template>

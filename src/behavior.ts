@@ -1,4 +1,4 @@
-import { createApp, Reactive, reactive } from "vue"
+import { createApp, Reactive } from "vue"
 import { KeyEvent, KeyObserver } from "./keyObserver"
 import App from "./App.vue"
 import { Constants } from "./constants"
@@ -32,6 +32,8 @@ export type PanelState = {
   x: number
   y: number
   elem: HTMLElement | null
+  backgroundColor: string | null
+  canvas: HTMLCanvasElement | null
 }
 
 type Pointing = {
@@ -39,6 +41,18 @@ type Pointing = {
   y: number
   z: number
   elem: HTMLElement
+  cloneElem: HTMLElement
+}
+
+function getBackgroundColor(elem: HTMLElement | null, isFollowingParent = true): string | null {
+  while (elem) {
+    const bgColor = getComputedStyle(elem).backgroundColor
+    if (bgColor !== "" && bgColor !== "rgba(0, 0, 0, 0)" && bgColor !== "transparent") {
+      return bgColor
+    }
+    elem = isFollowingParent ? elem.parentElement : null
+  }
+  return null
 }
 
 export class Behavior {
@@ -50,11 +64,13 @@ export class Behavior {
     visible: false,
     x: 0,
     y: 0,
-    elem: null
+    elem: null,
+    backgroundColor: null,
+    canvas: null
   })
 
-  private dependencies: { 
-    keyObserver: KeyObserver 
+  private dependencies: {
+    keyObserver: KeyObserver
     messsenger: Messenger
   }
 
@@ -70,9 +86,7 @@ export class Behavior {
       this.appContainer = appContainer
 
       const app = createApp(App)
-      app.provide<
-        Reactive<PanelState>
-      >(Constants.PANEL_STATE, this.panelState)
+      app.provide<Reactive<PanelState>>(Constants.PANEL_STATE, this.panelState)
       app.provide<Actions>(Constants.ACTIONS, {
         dispatch: this.dispatch.bind(this)
       })
@@ -87,10 +101,18 @@ export class Behavior {
         return
       }
       this.state = Status.operating
-      this.panelState.elem = pointing.elem
+      this.panelState.elem = pointing.cloneElem
+      const backgroundColor = getBackgroundColor(pointing.cloneElem, false)
+        ? null
+        : getBackgroundColor(pointing.elem.parentElement as HTMLElement)
+
       this.panelState.x = x + window.scrollX
       this.panelState.y = y + window.scrollY
+      // html2canvas(pointing.elem).then((canvas) => {
+      // this.panelState.canvas = canvas
+      this.panelState.backgroundColor = backgroundColor
       this.panelState.visible = true
+      // })
     },
     [Status.idle]: () => {
       this.state = Status.idle
@@ -113,7 +135,6 @@ export class Behavior {
       this.behaviorBySystem[Status.idle]()
 
       // new ApiClient().post()
-
 
       return Promise.resolve()
     },
@@ -146,12 +167,20 @@ export class Behavior {
       }
 
       this.pointing.z = nextZ
-      this.pointing.elem.style.outline = ""
-      this.pointing.elem.style.backgroundColor = ""
+      this.pointing.elem.style.outline = this.pointing.elem.dataset.outline ?? ""
+      this.pointing.elem.style.backgroundColor = this.pointing.elem.dataset.backgroundColor ?? ""
       const nextElem = elements[nextZ]
+      const cloneElem = nextElem.cloneNode(true) as HTMLElement
+      if (nextElem.style.outline) {
+        nextElem.dataset.outline = nextElem.style.outline
+      }
       nextElem.style.outline = "2px solid rgba(0, 153, 255, 0.75)"
+      if (nextElem.style.backgroundColor) {
+        nextElem.dataset.backgroundColor = nextElem.style.backgroundColor
+      }
       nextElem.style.backgroundColor = "rgba(0, 153, 255, 0.1)"
       this.pointing.elem = nextElem
+      this.pointing.cloneElem = cloneElem
 
       return Promise.resolve()
     }
@@ -176,19 +205,27 @@ export class Behavior {
       if (this.pointing && topElem === this.pointing.elem) return
 
       if (this.pointing) {
-        this.pointing.elem.style.outline = ""
-        this.pointing.elem.style.backgroundColor = ""
+        this.pointing.elem.style.outline = this.pointing.elem.dataset.outline ?? ""
+        this.pointing.elem.style.backgroundColor = topElem.dataset.backgroundColor ?? ""
         this.pointing = null
       }
 
       if (topElem) {
+        const elem = topElem.cloneNode(true) as HTMLElement
+        if (topElem.style.outline) {
+          topElem.dataset.outline = topElem.style.outline
+        }
+        if (topElem.style.backgroundColor) {
+          topElem.dataset.backgroundColor = topElem.style.backgroundColor
+        }
         topElem.style.outline = "2px solid rgba(0, 153, 255, 0.75)"
         topElem.style.backgroundColor = "rgba(0, 153, 255, 0.1)"
         this.pointing = {
           x: event.clientX,
           y: event.clientY,
           z: 0,
-          elem: topElem
+          elem: topElem,
+          cloneElem: elem
         }
       }
     })
@@ -216,7 +253,7 @@ export class Behavior {
           } else if (this.state !== Status.operating) {
             this.behaviorBySystem[Status.idle]()
           }
-          
+
           return
         }
         case KeyEvent.keys.blur: {
