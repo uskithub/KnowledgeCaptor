@@ -1,15 +1,9 @@
 <script setup lang="ts">
-import { inject, Reactive, watch } from "vue"
+import { inject, Reactive, toRaw, watch } from "vue"
 import { Constants } from "./constants"
-import { Usecases } from "./behavior"
+import { PanelState, Usecases } from "./behavior"
 
-const panelState = inject<
-  Reactive<{
-    visible: boolean
-    x: number
-    y: number
-  }>
->(Constants.PANEL_STATE)!
+const panelState = inject<PanelState>(Constants.PANEL_STATE)!
 
 const actions = inject<{
   dispatch: (usecase: Usecases) => Promise<any>
@@ -25,7 +19,7 @@ const onClickClose = () => {
     class="vue-panel"
     :style="{ left: panelState.x + 'px', top: panelState.y + 'px' }"
   >
-    カスタムパネル
+    {{ panelState.elem.outerHTML }}
     <button @click="onClickClose" style="margin-left: 10px">閉じる</button>
   </div>
 </template>

@@ -3,11 +3,11 @@ import { Empty, SwiftEnum, SwiftEnumCases } from "./enum"
 type Observer<T> = (data: T) => void
 
 type KeyEventContext = {
-  keyDown: { key: string }
-  keyUp: { key: string }
+  keyDown: { key: string, event: KeyboardEvent }
+  keyUp: { key: string, event: KeyboardEvent }
   blur: Empty
-  arrowUp: Empty
-  arrowDown: Empty
+  arrowUp: { event: KeyboardEvent }
+  arrowDown: { event: KeyboardEvent }
 }
 
 export const KeyEvent = new SwiftEnum<KeyEventContext>()
@@ -34,7 +34,7 @@ export class KeyObserver {
         return (e2: KeyboardEvent) => {
           console.log(`waiting for keyup of ${keyCode}:`, e2.code)
           if (e2.code === keyCode) {
-            this.observers.forEach((observer) => observer(KeyEvent.keyUp({ key: keyCode })))
+            this.observers.forEach((observer) => observer(KeyEvent.keyUp({ key: keyCode, event: e2 })))
             this.isKeyPressing = false
             document.removeEventListener("keyup", keyupHandler)
             window.removeEventListener("blur", blurHandler)
@@ -51,13 +51,13 @@ export class KeyObserver {
       }
 
       this.isKeyPressing = true
-      this.observers.forEach((observer) => observer(KeyEvent.keyDown({ key: e.code })))
+      this.observers.forEach((observer) => observer(KeyEvent.keyDown({ key: e.code, event: e })))
       document.addEventListener("keyup", keyupHandler)
       window.addEventListener("blur", blurHandler)
     } else if (e.code === "ArrowUp" && this.isKeyPressing) {
-      this.observers.forEach((observer) => observer(KeyEvent.arrowUp()))
+      this.observers.forEach((observer) => observer(KeyEvent.arrowUp({ event: e })))
     } else if (e.code === "ArrowDown" && this.isKeyPressing) {
-      this.observers.forEach((observer) => observer(KeyEvent.arrowDown()))
+      this.observers.forEach((observer) => observer(KeyEvent.arrowDown({ event: e })))
     }
   }
 }

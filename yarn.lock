@@ -1083,6 +1083,7 @@ __metadata:
   dependencies:
     "@types/chrome": "npm:^0.0.300"
     "@vitejs/plugin-vue": "npm:^5.2.1"
+    ky: "npm:^1.7.4"
     prettier: "npm:^3.4.2"
     typescript: "npm:~5.6.2"
     vite: "npm:^6.0.5"
@@ -1090,6 +1091,13 @@ __metadata:
     vue-tsc: "npm:^2.2.0"
   languageName: unknown
   linkType: soft
+
+"ky@npm:^1.7.4":
+  version: 1.7.4
+  resolution: "ky@npm:1.7.4"
+  checksum: 10c0/8b28b85cbee6d3e073ff796b92661f4bf155ec9b9a131411de1c34fb2f89f8507e67ff3df369e3c6d18714134774e8735e88cba72b19d005a09112b800d14474
+  languageName: node
+  linkType: hard
 
 "lru-cache@npm:^10.0.1, lru-cache@npm:^10.2.0":
   version: 10.4.3

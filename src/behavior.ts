@@ -3,11 +3,14 @@ import { KeyEvent, KeyObserver } from "./keyObserver"
 import App from "./App.vue"
 import { Constants } from "./constants"
 import { Empty, SwiftEnum, SwiftEnumCases } from "./enum"
+import { Messenger } from "./messenger"
+import { shallowReactive } from "vue"
 
 export const Status = {
   idle: "idle",
   aiming: "aiming",
-  selected: "selected"
+  switching: "switching",
+  operating: "operating"
 } as const
 
 export type Status = (typeof Status)[keyof typeof Status]
@@ -24,27 +27,36 @@ export type Actions = {
   dispatch: (usecase: Usecases) => Promise<any>
 }
 
+export type PanelState = {
+  visible: boolean
+  x: number
+  y: number
+  elem: HTMLElement | null
+}
+
+type Pointing = {
+  x: number
+  y: number
+  z: number
+  elem: HTMLElement
+}
+
 export class Behavior {
   private state: Status = Status.idle
-  private pointing: {
-    x: number
-    y: number
-    z: number
-    elem: HTMLElement
-  } | null = null
+  private pointing: Pointing | null = null
   private appContainer: HTMLElement | null = null
 
-  private panelState = reactive<{
-    visible: boolean
-    x: number
-    y: number
-  }>({
+  private panelState = shallowReactive<PanelState>({
     visible: false,
     x: 0,
-    y: 0
+    y: 0,
+    elem: null
   })
 
-  private dependencies: { keyObserver: KeyObserver }
+  private dependencies: { 
+    keyObserver: KeyObserver 
+    messsenger: Messenger
+  }
 
   private behaviorBySystem: { [key in Status]: (...args: any) => void } = {
     [Status.aiming]: () => {
@@ -59,26 +71,25 @@ export class Behavior {
 
       const app = createApp(App)
       app.provide<
-        Reactive<{
-          visible: boolean
-          x: number
-          y: number
-        }>
+        Reactive<PanelState>
       >(Constants.PANEL_STATE, this.panelState)
       app.provide<Actions>(Constants.ACTIONS, {
         dispatch: this.dispatch.bind(this)
       })
       app.mount(appContainer)
     },
-    [Status.selected]: (elem: HTMLElement | null, x: number, y: number) => {
-      if (elem === null) {
+    [Status.switching]: () => {
+      // do nothing
+    },
+    [Status.operating]: (pointing: Pointing, x: number, y: number) => {
+      if (pointing.elem === null) {
         this.state = Status.idle
         return
       }
-      this.state = Status.selected
-      console.log(elem)
-      this.panelState.x = x
-      this.panelState.y = y
+      this.state = Status.operating
+      this.panelState.elem = pointing.elem
+      this.panelState.x = x + window.scrollX
+      this.panelState.y = y + window.scrollY
       this.panelState.visible = true
     },
     [Status.idle]: () => {
@@ -99,6 +110,11 @@ export class Behavior {
     [Usecases.keys.closePanel]: (): Promise<void> => {
       console.log("closePanel")
       this.panelState.visible = false
+      this.behaviorBySystem[Status.idle]()
+
+      // new ApiClient().post()
+
+
       return Promise.resolve()
     },
     [Usecases.keys.lookThrough]: ({ direction }: { direction: "up" | "down" }): Promise<void> => {
@@ -107,6 +123,8 @@ export class Behavior {
       if (this.pointing === null) {
         return Promise.resolve()
       }
+
+      this.state = Status.switching
 
       const elements = document.elementsFromPoint(this.pointing.x, this.pointing.y) as HTMLElement[]
 
@@ -141,14 +159,15 @@ export class Behavior {
 
   constructor() {
     this.dependencies = {
-      keyObserver: new KeyObserver()
+      keyObserver: new KeyObserver(),
+      messsenger: new Messenger()
     }
   }
 
   setup() {
     console.log("setup")
     document.addEventListener("mousemove", (event: MouseEvent) => {
-      if (this.state === Status.idle) {
+      if (this.state === Status.idle || this.state === Status.operating) {
         return
       }
 
@@ -178,7 +197,9 @@ export class Behavior {
       if (this.state !== Status.aiming) {
         return
       }
-      this.behaviorBySystem[Status.selected](this.pointing, event.clientX, event.clientY)
+      event.stopPropagation()
+      event.preventDefault()
+      this.behaviorBySystem[Status.operating](this.pointing, event.clientX, event.clientY)
     })
 
     this.dependencies.keyObserver.subscribe((context) => {
@@ -189,22 +210,32 @@ export class Behavior {
           this.behaviorBySystem[Status.aiming]()
           return
         }
-        case KeyEvent.keys.keyUp:
+        case KeyEvent.keys.keyUp: {
+          if (this.pointing !== null && this.state === Status.switching) {
+            this.behaviorBySystem[Status.operating](this.pointing, this.pointing.x, this.pointing.y)
+          } else if (this.state !== Status.operating) {
+            this.behaviorBySystem[Status.idle]()
+          }
+          
+          return
+        }
         case KeyEvent.keys.blur: {
           this.behaviorBySystem[Status.idle]()
           return
         }
         case KeyEvent.keys.arrowUp: {
-          if (this.pointing === null) {
+          if (this.pointing === null || this.state === Status.operating) {
             return
           }
+          context.event.preventDefault()
           this.dispatch(Usecases.lookThrough({ direction: "up" }))
           return
         }
         case KeyEvent.keys.arrowDown: {
-          if (this.pointing === null) {
+          if (this.pointing === null || this.state === Status.operating) {
             return
           }
+          context.event.preventDefault()
           this.dispatch(Usecases.lookThrough({ direction: "down" }))
           return
         }
